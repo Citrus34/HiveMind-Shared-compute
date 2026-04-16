@@ -25,23 +25,7 @@ Your current local discovery (zeroconf) works only on the same Wi-Fi. Tailscale 
    - Click **Access Controls** on the left.  
    - Replace everything with the code below, then click **Save**.  
    ```json
-   {
-     "acls": [
-       {
-         "action": "accept",
-         "src": ["tag:computenode"],
-         "dst": ["tag:computenode:*"]
-       }
-     ],
-     "ssh": [
-       {
-         "action": "accept",
-         "src": ["autogroup:admin"],
-         "dst": ["tag:computenode"],
-         "users": ["root", "autogroup:nonroot"]
-       }
-     ]
-   }
+   {{"tagOwners":{"tag:computenode":["autogroup:admin"]},"acls":[{"action":"accept","src":["tag:computenode"],"dst":["tag:computenode:*"]}],"ssh":[{"action":"accept","src":["autogroup:admin"],"dst":["tag:computenode"],"users":["root","autogroup:nonroot"]}]}
 This creates a secure bidirectional mesh for HiveMind packet passing.
 Sources: Official Tailscale ACLs and MagicDNS documentation (https://tailscale.com/kb/1018/acls, https://tailscale.com/kb/1081/magicdns).
 2. Device Setup – macOS
