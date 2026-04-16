@@ -1,18 +1,29 @@
-# HiveMind Shared Compute – Device Setup Guide (macOS, Windows & Linux)
+# HiveMind Shared Compute – Easy Tailscale Setup Guide  
+*(macOS, Windows & Linux – For Anyone)*
 
-**Purpose**: Set up Tailscale on every device so HiveMind nodes form a secure, global, bidirectional mesh. This lets any node send/receive processing packets (tasks, results, GPU/CPU sharing) using stable MagicDNS names or Tailscale IPs — no port forwarding, no public IPs, no NAT headaches.
+**Welcome!**  
+This guide turns your devices (and future volunteer computers) into a secure, global network where HiveMind can send and receive processing packets (tasks, results, GPU/CPU sharing) with zero port-forwarding or NAT problems.  
 
-**Why Tailscale?**  
-It creates a WireGuard-based mesh VPN with automatic NAT traversal, end-to-end encryption, and zero-config discovery. Perfect for Phase 1 P2P networking in HiveMind. All inter-node pyzmq communication will bind to Tailscale interfaces.  
-**Sources**: Official Tailscale architecture docs[](https://tailscale.com/kb/1151).
+Tailscale creates a private mesh network using WireGuard. Every device gets a permanent name (like `studio-mac`) and a stable IP (like `100.64.x.x`). Your pyzmq sockets will simply talk over this mesh.
 
-## 1. One-Time Tailnet Admin Setup (Do this first)
+**Why this matters for HiveMind**  
+Your current local discovery (zeroconf) works only on the same Wi-Fi. Tailscale removes the barrier so volunteers anywhere in the world can join and share high-end computing power.
 
-1. Go to [https://login.tailscale.com/admin](https://login.tailscale.com/admin) and create a free account (use the same Google/Apple/GitHub/Microsoft login on all devices).
-2. **Enable MagicDNS** (required for human-readable hostnames):
-   - Visit: https://login.tailscale.com/admin/dns
-   - Toggle **Enable MagicDNS** → ON.
-3. **Set up Access Control List (ACLs)** for HiveMind security (copy-paste this policy):
+**Time required**: 10–15 minutes per device.
+
+## 1. One-Time Tailnet Admin Setup (Do This First)
+
+1. Open your browser and go to [https://login.tailscale.com/admin](https://login.tailscale.com/admin).  
+   Sign up / log in with the **same account** you will use on every device (Google, Apple, GitHub, or Microsoft works best).
+
+2. **Enable MagicDNS** (this gives every device a readable name):  
+   - Click **DNS** on the left menu.  
+   - Toggle **Enable MagicDNS** → **ON**.  
+   You’ll now see names like `studio-mac.your-tailnet.ts.net`.
+
+3. **Set Access Control (ACLs)** so only compute nodes can talk to each other:  
+   - Click **Access Controls** on the left.  
+   - Replace everything with the code below, then click **Save**.  
    ```json
    {
      "acls": [
@@ -31,119 +42,92 @@ It creates a WireGuard-based mesh VPN with automatic NAT traversal, end-to-end e
        }
      ]
    }
+This creates a secure bidirectional mesh for HiveMind packet passing.
+Sources: Official Tailscale ACLs and MagicDNS documentation (https://tailscale.com/kb/1018/acls, https://tailscale.com/kb/1081/magicdns).
+2. Device Setup – macOS
 
-Save at: https://login.tailscale.com/admin/acls
-This creates a full bidirectional mesh only between compute nodes.
+Go to https://tailscale.com/download → click Download for macOS.
+Open the downloaded .pkg file and follow the installer.
+Open Tailscale from Spotlight (press Cmd + Space, type “Tailscale”).
+Click Log in and use the same account. Allow the VPN prompt.
+Tag the device (important!):
+Click the Tailscale icon in the menu bar → Admin console.
+In Devices list, click the three dots next to your Mac → Edit → Tags → type tag:computenode → Save.
 
-Sources: Tailscale ACLs documentation and MagicDNS guide.
-2. Device Setup – macOS (Studio Mac + MacBooks)
-Tested on: macOS 12+ (Apple Silicon & Intel).
+Enable SSH (for remote help):
+Open Terminal and run:Bashtailscale set --ssh
+Test it:Bashtailscale status
+tailscale ip -4          # shows your stable IP
+ping studio-mac          # should reply!
 
-Install
-Go to https://tailscale.com/download → “Download for macOS”.
-Open the .pkg and follow the installer.
+3. Device Setup – Windows
 
-First Run & Login
-Open Tailscale from Spotlight (Cmd + Space).
-Click Log in → use the same account as above.
-Allow the VPN configuration prompt.
-
-Tag as Compute Node (critical for ACLs)
-In the menu-bar Tailscale icon → Admin console → Devices.
-Edit each device → Tags → add tag:computenode.
-
-Enable Tailscale SSH (for remote management)Bash# In Terminal
-tailscale set --ssh
-CLI VerificationBash# Check status
-tailscale status
-
-# Your stable IP
-tailscale ip -4
-
-# Test bidirectional ping to other nodes
-ping studio-mac
-ping windows-laptop
-
-Sources: Official macOS install guide.
-3. Device Setup – Windows (Personal Laptop)
-Tested on: Windows 10/11.
-
-Install
-Go to https://tailscale.com/download → “Download for Windows”.
-Run the .exe.
-
-First Run & Login
-App opens automatically.
-Click Log in → same account.
-Allow VPN configuration.
-
-Tag as Compute Node
-Go to web admin console.
-Edit the Windows device → add tag tag:computenode.
-
-CLI Verification (PowerShell as Administrator)PowerShell# Check status
-tailscale status
-
-# Your stable IP
-tailscale ip -4
-
-# Test bidirectional ping (this fixes the "no such host" error you saw)
-ping studio-mac
-
-Fix for your earlier SSH issue (“No ED25519 host key…”):
-Run once on the target Mac:
-Bashtailscale set --ssh
-Then on Windows:
-PowerShelltailscale ssh --accept-risks=lose-ssh studio-mac
-Future connections work automatically.
-Source: Tailscale SSH troubleshooting.
-4. Device Setup – Linux (Future Volunteer Servers / Raspberry Pi)
-
-InstallBashcurl -fsSL https://tailscale.com/install.sh | sh
-Login & Tag (use an auth key for headless setup)
-In admin console → Settings → Auth keys → generate reusable key.
-Bashsudo tailscale up --authkey=tskey-xxx --advertise-tags=tag:computenode
-Enable SSH & VerifyBashsudo tailscale set --ssh
-tailscale status
+Go to https://tailscale.com/download → Download for Windows.
+Run the .exe installer.
+The app opens automatically → click Log in with the same account.
+Tag the device: Use the web admin console (same as macOS step 5) and add tag:computenode.
+Test it (open PowerShell as Administrator):PowerShelltailscale status
 tailscale ip -4
 ping studio-mac
 
-Source: Linux install guide.
-5. HiveMind Integration (How packets flow)
-Once Tailscale is running:
+4. Device Setup – Linux (Volunteer Servers or Raspberry Pi)
 
-Nodes discover peers via the discover_compute_peers() helper (we’ll add this in src/hivemind/networking/tailscale.py).
-pyzmq sockets bind to the Tailscale IP (e.g. tcp://100.x.x.x:5555).
-All task/result packets travel encrypted over the mesh.
+Open a terminal and run:Bashcurl -fsSL https://tailscale.com/install.sh | sh
+Log in with an auth key (easiest for servers):
+In admin console → Settings → Auth keys → Generate a reusable key.
+Run:
+Bashsudo tailscale up --authkey=tskey-XXXXXXXXXXXXXXXX --advertise-tags=tag:computenode
+Enable SSH:Bashsudo tailscale set --ssh
+Test:Bashtailscale status
+ping studio-mac
 
-Next code step (add to your node startup):
-Pythonfrom hivemind.networking.tailscale import get_tailscale_ip, discover_compute_peers
+5. HiveMind Integration (How Packets Flow)
+Once Tailscale is on, your Python code can use the mesh automatically.
+We will add a small helper file soon (src/hivemind/networking/tailscale.py), but for now you can test with this snippet in your node startup code:
+Pythonimport subprocess
+import json
+
+def get_tailscale_ip():
+    try:
+        result = subprocess.run(["tailscale", "ip", "-4"], capture_output=True, text=True)
+        return result.stdout.strip()
+    except:
+        return None
+
 ts_ip = get_tailscale_ip()
 if ts_ip:
-    socket.bind(f"tcp://{ts_ip}:5555")
-6. Troubleshooting
-
-“no such host” → Use exact MagicDNS name from tailscale status.
-Host key verification failed → Run the --accept-risks flag once (see Windows section).
-Ping works but pyzmq fails → Check firewall allows traffic on your chosen port (Tailscale ACLs already permit it).
-Device not online → Run tailscale up again.
-
+    print(f"✅ HiveMind using Tailscale IP: {ts_ip}")
+    # Your pyzmq socket will bind here instead of 0.0.0.0
+6. Common Problems & Solutions (Anyone Can Fix These)
+Problem 1: “no such host” when pinging
+→ Solution: Use the exact name shown in tailscale status (usually short name like studio-mac). MagicDNS is case-sensitive.
+Problem 2: “No ED25519 host key… Host key verification failed” (SSH error)
+→ On the target Mac run: tailscale set --ssh
+→ Then on Windows: tailscale ssh --accept-risks=lose-ssh studio-mac
+(The key will be remembered forever after.)
+Problem 3: Device shows “offline”
+→ Run tailscale up again on that device. Make sure Tailscale app is running (on macOS/Windows).
+Problem 4: Can’t see other devices
+→ Double-check every device has the tag tag:computenode.
+→ Restart Tailscale on all machines.
+Problem 5: Windows firewall blocks pyzmq
+→ Windows Defender Firewall → Allow an app → add Python.exe (or your HiveMind executable).
+Problem 6: “Tailscale not found” in terminal
+→ macOS: restart Terminal or run source ~/.zshrc
+→ Windows: restart PowerShell after install.
+Problem 7: Volunteer can’t join (headless setup)
+→ Give them a reusable auth key from the admin console and the one-line command from section 4.
+Problem 8: Slow connections
+→ Tailscale will automatically use direct WireGuard tunnels. If it uses a relay (DERP), it’s still encrypted and works — just slightly slower.
+Problem 9: Forgetting the tailnet
+→ On any device run tailscale logout then log in again with the same account.
+Problem 10: ACLs not working
+→ Double-check the JSON policy was saved correctly (copy-paste exactly).
 7. Volunteer Onboarding (Future Global Scale)
-Share this one-liner with volunteers:
-“Install Tailscale → join our tailnet with this auth key → run tailscale up --advertise-tags=tag:computenode → done. Your GPU/CPU is now part of HiveMind.”
-
-How to update your repo:
-
-Open Mac _Windows_Setup.md in your editor.
-Replace everything with the markdown above.
-Commit with message: “docs: full Tailscale mesh setup guide for all platforms + HiveMind integration”.
-(Optional) Update README.md Quick Start to link: See [Mac _Windows_Setup.md](./Mac _Windows_Setup.md) for Tailscale networking.
-
-This guide is now self-contained, educational, and directly advances your shared-compute architecture. It teaches volunteers exactly how the barrier to high-end distributed processing is removed.
-Documented Sources (all official as of April 2026):
-
-Tailscale core docs: https://tailscale.com/kb (installation, ACLs, MagicDNS, SSH).
-Your repo’s current Mac _Windows_Setup.md (raw): https://raw.githubusercontent.com/Citrus34/HiveMind-Shared-compute/main/Mac%20_Windows_Setup.md.
-HiveMind project context: https://github.com/Citrus34/HiveMind-Shared-compute (README + pyproject.toml).
-
-Let me know when you’ve pushed this — next we can generate the tailscale.py helper and update the node code together. We’re building the global layer!
+Send volunteers this simple message:
+“1. Download Tailscale from https://tailscale.com/download
+2. Log in with this link: [your tailnet invite link]
+3. Run this command in terminal/PowerShell:
+tailscale up --advertise-tags=tag:computenode
+That’s it! Your computer is now part of HiveMind’s shared compute mesh.”
+7. Volunteer Onboarding (Future Global Scale)
