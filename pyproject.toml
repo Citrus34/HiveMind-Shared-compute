@@ -1,31 +1,42 @@
-[build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "hivemind-shared-compute"
 version = "0.1.0"
-description = "Open-source platform for shared high-end computing: pool idle CPU/GPU/network resources across heterogeneous devices."
+description = "Democratizing high-end computing by pooling idle CPU/GPU resources across devices"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
+    "psutil>=5.9",
     "pydantic>=2.0",
+    "pydantic-settings",
+    "rich",
+    "zeroconf",
     "pyzmq",
-    "zeroconf",           # for LAN peer discovery
+    "structlog",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8.0",
-    "pytest-asyncio",
+    "pytest",
+    "black",
     "ruff",
     "mypy",
-    "black",
 ]
+ray = ["ray[default]>=2.0"]
 
 [project.scripts]
-hivemind = "hivemind_shared_compute.client.cli:main"
+hivemind-host = "hivemind.host:main"
+hivemind-client = "hivemind.client:main"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hivemind"]
+
+[tool.hatch.build.targets.editable]
+mode = "in-tree"

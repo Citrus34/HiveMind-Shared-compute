@@ -1,0 +1,1 @@
+ 4/16/26: added tailscale and mDNS ingegration for zero conflict connections on similar or different networks
