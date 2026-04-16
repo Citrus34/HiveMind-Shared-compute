@@ -28,7 +28,7 @@ Your current local discovery (zeroconf) works only on the same Wi-Fi. Tailscale 
    {{"tagOwners":{"tag:computenode":["autogroup:admin"]},"acls":[{"action":"accept","src":["tag:computenode"],"dst":["tag:computenode:*"]}],"ssh":[{"action":"accept","src":["autogroup:admin"],"dst":["tag:computenode"],"users":["root","autogroup:nonroot"]}]}
 This creates a secure bidirectional mesh for HiveMind packet passing.
 Sources: Official Tailscale ACLs and MagicDNS documentation (https://tailscale.com/kb/1018/acls, https://tailscale.com/kb/1081/magicdns).
-##2. Device Setup – macOS
+## 2. Device Setup – macOS
 
 Go to https://tailscale.com/download → click Download for macOS.
 
@@ -54,7 +54,7 @@ tailscale ip -4          # shows your stable IP
 
 ping studio-mac          # should reply!
 
-##3. Device Setup – Windows
+## 3. Device Setup – Windows
 
 Go to https://tailscale.com/download → Download for Windows.
 
@@ -70,7 +70,7 @@ tailscale ip -4
 
 ping studio-mac
 
-##4. Device Setup – Linux (Volunteer Servers or Raspberry Pi)
+## 4. Device Setup – Linux (Volunteer Servers or Raspberry Pi)
 
 Open a terminal and run:Bashcurl -fsSL https://tailscale.com/install.sh | sh
 
@@ -87,7 +87,7 @@ Test:Bashtailscale status
 
 ping studio-mac
 
-##5. HiveMind Integration (How Packets Flow)
+## 5. HiveMind Integration (How Packets Flow)
 Once Tailscale is on, your Python code can use the mesh automatically.
 We will add a small helper file soon (src/hivemind/networking/tailscale.py), but for now you can test with this snippet in your node startup code:
 Pythonimport subprocess
@@ -104,7 +104,7 @@ ts_ip = get_tailscale_ip()
 if ts_ip:
     print(f"✅ HiveMind using Tailscale IP: {ts_ip}")
     # Your pyzmq socket will bind here instead of 0.0.0.0
-##6. Common Problems & Solutions 
+## 6. Common Problems & Solutions 
 Problem 1: “no such host” when pinging
 → Solution: Use the exact name shown in tailscale status (usually short name like studio-mac). MagicDNS is case-sensitive.
 
