@@ -98,36 +98,49 @@ ts_ip = get_tailscale_ip()
 if ts_ip:
     print(f"✅ HiveMind using Tailscale IP: {ts_ip}")
     # Your pyzmq socket will bind here instead of 0.0.0.0
-6. Common Problems & Solutions (Anyone Can Fix These)
+6. Common Problems & Solutions 
 Problem 1: “no such host” when pinging
 → Solution: Use the exact name shown in tailscale status (usually short name like studio-mac). MagicDNS is case-sensitive.
+
 Problem 2: “No ED25519 host key… Host key verification failed” (SSH error)
 → On the target Mac run: tailscale set --ssh
 → Then on Windows: tailscale ssh --accept-risks=lose-ssh studio-mac
 (The key will be remembered forever after.)
+
 Problem 3: Device shows “offline”
 → Run tailscale up again on that device. Make sure Tailscale app is running (on macOS/Windows).
+
 Problem 4: Can’t see other devices
 → Double-check every device has the tag tag:computenode.
 → Restart Tailscale on all machines.
+
 Problem 5: Windows firewall blocks pyzmq
 → Windows Defender Firewall → Allow an app → add Python.exe (or your HiveMind executable).
+
 Problem 6: “Tailscale not found” in terminal
 → macOS: restart Terminal or run source ~/.zshrc
 → Windows: restart PowerShell after install.
+
 Problem 7: Volunteer can’t join (headless setup)
 → Give them a reusable auth key from the admin console and the one-line command from section 4.
+
 Problem 8: Slow connections
 → Tailscale will automatically use direct WireGuard tunnels. If it uses a relay (DERP), it’s still encrypted and works — just slightly slower.
+
 Problem 9: Forgetting the tailnet
 → On any device run tailscale logout then log in again with the same account.
+
 Problem 10: ACLs not working
 → Double-check the JSON policy was saved correctly (copy-paste exactly).
 7. Volunteer Onboarding (Future Global Scale)
+
 Send volunteers this simple message:
 “1. Download Tailscale from https://tailscale.com/download
+
 2. Log in with this link: [your tailnet invite link]
+
 3. Run this command in terminal/PowerShell:
 tailscale up --advertise-tags=tag:computenode
+
 That’s it! Your computer is now part of HiveMind’s shared compute mesh.”
 7. Volunteer Onboarding (Future Global Scale)
