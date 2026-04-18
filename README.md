@@ -11,7 +11,7 @@
 
 ## Quick Start
 
-1. Clone: `git clone https://github.com/YOURUSERNAME/shared-compute.git`
+1. Clone: `git clone https://github.com/Citrus34/shared-compute.git`
 2. Install dependencies...
 3. Run node: `python src/client/run_node.py`
 
