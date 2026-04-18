@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  hivemind-interface:
+    image: python
+    container_name: hivemind-dev
+    volumes:
+      - ./hivemind-data:/app/data          # persistent "hard drive container"
+      - .:/app/code                        # source code
+    working_dir: /app/code
+    command: tail -f /dev/null             #keep container running for dev
+    restart: unless-stopped
+    # Add Tailscale networking later
