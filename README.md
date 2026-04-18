@@ -8,6 +8,7 @@
 * Secure task scheduling with fault tolerance.
 * Easy client for individuals to contribute or consume compute.
 * Scalable from local LAN to global volunteer pools.
+* Local LLM application with model escalation to higher end compute systems
 
 ## Quick Start
 
