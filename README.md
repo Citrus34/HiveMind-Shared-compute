@@ -8,10 +8,11 @@
 * Secure task scheduling with fault tolerance.
 * Easy client for individuals to contribute or consume compute.
 * Scalable from local LAN to global volunteer pools.
+* Local LLM application with model escalation to higher end compute systems
 
 ## Quick Start
 
-1. Clone: `git clone https://github.com/YOURUSERNAME/shared-compute.git`
+1. Clone: `git clone https://github.com/Citrus34/shared-compute.git`
 2. Install dependencies...
 3. Run node: `python src/client/run_node.py`
 
