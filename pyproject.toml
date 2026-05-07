@@ -16,6 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+gpu = ["torch"]  # CUDA on Windows, MPS on Mac Studio
 dev = [
     "pytest",
     "black",
@@ -27,6 +28,8 @@ ray = ["ray[default]>=2.0"]
 [project.scripts]
 hivemind-host = "hivemind.host:main"
 hivemind-client = "hivemind.client:main"
+[project.scripts]
+hivemind = "hivemind.client.cli:main"  # we'll add cli.py next
 
 [build-system]
 requires = ["hatchling"]

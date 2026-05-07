@@ -1,4 +1,4 @@
-#mDNS, DHT, or custom peer finding (Tailscale)
+# src/network/discovery.py
 import subprocess
 import json
 from typing import Dict, List, Optional
@@ -8,23 +8,30 @@ import zmq.asyncio
 import asyncio
 from datetime import datetime
 
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
 class NodeResources(BaseModel):
     cpu_cores: int
     cpu_percent: float
     memory_total_gb: float
     memory_available_gb: float
-    gpu_available: bool  # placeholder — we’ll expand with GPU detection later
+    gpu_available: bool
+    gpu_type: str = "none"          # "cuda", "mps", or "none"
+    gpu_memory_gb: Optional[float] = None
     timestamp: str
 
 class DiscoveredPeer(BaseModel):
     tailscale_ip: str
     hostname: str
     resources: NodeResources
-    node_id: str  # UUID or hostname-based
+    node_id: str
 
 class HiveMindDiscovery:
-    CONTROL_PORT = 4242  # fixed control port over Tailscale
-    SERVICE_NAME = "hivemind"  # for future filtering if we add tags
+    CONTROL_PORT = 4242
 
     def __init__(self, node_id: str):
         self.node_id = node_id
@@ -32,17 +39,43 @@ class HiveMindDiscovery:
         self.my_resources = self._get_local_resources()
 
     def _get_local_resources(self) -> NodeResources:
-        """Advertise real hardware capabilities (psutil)."""
-        cpu = psutil.cpu_count(logical=False) or 4
+        """Cross-platform GPU detection (Windows NVIDIA CUDA + Mac Studio MPS)."""
         mem = psutil.virtual_memory()
+
+        gpu_available = False
+        gpu_type = "none"
+        gpu_memory_gb: Optional[float] = None
+
+        if TORCH_AVAILABLE:
+            try:
+                # Windows NVIDIA CUDA
+                if torch.cuda.is_available():
+                    gpu_available = True
+                    gpu_type = "cuda"
+                    gpu_memory_gb = round(torch.cuda.get_device_properties(0).total_memory / (1024**3), 2)
+                # Apple Silicon MPS (Mac Studio)
+                elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
+                    gpu_available = True
+                    gpu_type = "mps"
+                    # MPS does not expose VRAM easily, so use system RAM as proxy
+                    gpu_memory_gb = round(mem.total / (1024**3), 2)
+            except Exception as e:
+                print(f"[GPU Detection] Non-fatal torch error: {e}")
+
         return NodeResources(
-            cpu_cores=cpu,
+            cpu_cores=psutil.cpu_count(logical=False) or 4,
             cpu_percent=psutil.cpu_percent(interval=0.1),
             memory_total_gb=round(mem.total / (1024**3), 2),
             memory_available_gb=round(mem.available / (1024**3), 2),
-            gpu_available=False,  # TODO: add torch.cuda.is_available() or nvidia-smi later
+            gpu_available=gpu_available,
+            gpu_type=gpu_type,
+            gpu_memory_gb=gpu_memory_gb,
             timestamp=datetime.utcnow().isoformat()
         )
+
+    # === Keep the rest of your previous class exactly as-is ===
+    # (get_tailscale_peers, advertise_and_handshake, discover_peers)
+    # Paste the rest from the earlier Tailscale discovery version here if you haven't already
 
     def get_tailscale_peers(self) -> List[Dict]:
         """Core discovery: query Tailscale daemon directly."""
