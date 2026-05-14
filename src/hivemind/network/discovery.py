@@ -1,4 +1,4 @@
-# src/network/discovery.py
+# src/hivemind/network/discovery.py
 import subprocess
 import json
 from typing import Dict, List, Optional
@@ -20,7 +20,7 @@ class NodeResources(BaseModel):
     memory_total_gb: float
     memory_available_gb: float
     gpu_available: bool
-    gpu_type: str = "none"          # "cuda", "mps", or "none"
+    gpu_type: str = "none"
     gpu_memory_gb: Optional[float] = None
     timestamp: str
 
@@ -29,35 +29,31 @@ class DiscoveredPeer(BaseModel):
     hostname: str
     resources: NodeResources
     node_id: str
+    last_seen: str = ""
 
 class HiveMindDiscovery:
-    CONTROL_PORT = 4242
-
-    def __init__(self, node_id: str):
+    def __init__(self, node_id: str, control_port: int = 4242):
         self.node_id = node_id
+        self.control_port = control_port
         self.context = zmq.asyncio.Context()
         self.my_resources = self._get_local_resources()
+        self.live_peers: Dict[str, DiscoveredPeer] = {}
 
     def _get_local_resources(self) -> NodeResources:
-        """Cross-platform GPU detection (Windows NVIDIA CUDA + Mac Studio MPS)."""
         mem = psutil.virtual_memory()
-
         gpu_available = False
         gpu_type = "none"
         gpu_memory_gb: Optional[float] = None
 
         if TORCH_AVAILABLE:
             try:
-                # Windows NVIDIA CUDA
                 if torch.cuda.is_available():
                     gpu_available = True
                     gpu_type = "cuda"
                     gpu_memory_gb = round(torch.cuda.get_device_properties(0).total_memory / (1024**3), 2)
-                # Apple Silicon MPS (Mac Studio)
                 elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
                     gpu_available = True
                     gpu_type = "mps"
-                    # MPS does not expose VRAM easily, so use system RAM as proxy
                     gpu_memory_gb = round(mem.total / (1024**3), 2)
             except Exception as e:
                 print(f"[GPU Detection] Non-fatal torch error: {e}")
@@ -73,19 +69,9 @@ class HiveMindDiscovery:
             timestamp=datetime.utcnow().isoformat()
         )
 
-    # === Keep the rest of your previous class exactly as-is ===
-    # (get_tailscale_peers, advertise_and_handshake, discover_peers)
-    # Paste the rest from the earlier Tailscale discovery version here if you haven't already
-
     def get_tailscale_peers(self) -> List[Dict]:
-        """Core discovery: query Tailscale daemon directly."""
         try:
-            result = subprocess.run(
-                ["tailscale", "status", "--json"],
-                capture_output=True,
-                text=True,
-                check=True
-            )
+            result = subprocess.run(["tailscale", "status", "--json"], capture_output=True, text=True, check=True)
             data = json.loads(result.stdout)
             peers = []
             for peer_key, peer_data in data.get("Peer", {}).items():
@@ -95,46 +81,45 @@ class HiveMindDiscovery:
                         peers.append({
                             "tailscale_ip": ips[0],
                             "hostname": peer_data.get("Hostname", peer_key),
-                            "node_id": peer_key  # unique Tailscale identifier
+                            "node_id": peer_key
                         })
             return peers
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"[Discovery] Tailscale query failed: {e}. Falling back to local only.")
+        except Exception as e:
+            print(f"[Discovery] Tailscale query failed: {e}")
             return []
 
-    async def advertise_and_handshake(self, peer_ip: str) -> Optional[DiscoveredPeer]:
-        """Basic advertisement + resource exchange via ZeroMQ REQ/REP."""
+    async def send_heartbeat(self, peer_ip: str, peer_id: str) -> bool:
         socket = self.context.socket(zmq.REQ)
         socket.setsockopt(zmq.LINGER, 0)
-        socket.connect(f"tcp://{peer_ip}:{self.CONTROL_PORT}")
+        socket.connect(f"tcp://{peer_ip}:{self.control_port}")
         try:
-            # Send our advertisement
             await socket.send_json({
-                "type": "HIVEHAND_SHAKE",
-                "node_id": self.node_id,
-                "resources": self.my_resources.model_dump()
+                "type": "HIVEHAND_HEARTBEAT",
+                "node_id": self.node_id
             })
-            # Wait for response (timeout 2s)
-            response = await asyncio.wait_for(socket.recv_json(), timeout=2.0)
+            response = await asyncio.wait_for(socket.recv_json(), timeout=1.5)
             if response.get("type") == "HIVEHAND_ACK":
-                return DiscoveredPeer(
+                peer = DiscoveredPeer(
                     tailscale_ip=peer_ip,
                     hostname=response.get("hostname", "unknown"),
                     resources=NodeResources(**response["resources"]),
-                    node_id=response["node_id"]
+                    node_id=response["node_id"],
+                    last_seen=datetime.utcnow().isoformat()
                 )
+                self.live_peers[peer.node_id] = peer
+                return True
         except asyncio.TimeoutError:
-            pass  # not a HiveMind node or offline
+            self.live_peers.pop(peer_id, None)
         finally:
             socket.close()
-        return None
+        return False
 
-    async def discover_peers(self) -> List[DiscoveredPeer]:
-        """Full discovery + advertisement loop (call periodically)."""
+    async def discover_and_heartbeat(self) -> Dict[str, DiscoveredPeer]:
         peers = self.get_tailscale_peers()
-        active_hivemind_peers = []
         for p in peers:
-            discovered = await self.advertise_and_handshake(p["tailscale_ip"])
-            if discovered:
-                active_hivemind_peers.append(discovered)
-        return active_hivemind_peers
+            await self.send_heartbeat(p["tailscale_ip"], p["node_id"])
+        return self.live_peers
+
+    # Backward compatibility
+    async def discover_peers(self) -> Dict[str, DiscoveredPeer]:
+        return await self.discover_and_heartbeat()

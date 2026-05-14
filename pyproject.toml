@@ -28,8 +28,7 @@ ray = ["ray[default]>=2.0"]
 [project.scripts]
 hivemind-host = "hivemind.host:main"
 hivemind-client = "hivemind.client:main"
-[project.scripts]
-hivemind = "hivemind.client.cli:main"  # we'll add cli.py next
+hivemind = "hivemind.client.cli:main"
 
 [build-system]
 requires = ["hatchling"]
